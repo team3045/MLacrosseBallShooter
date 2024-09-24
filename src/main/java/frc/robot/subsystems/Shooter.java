@@ -12,11 +12,15 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.hardware.core.CoreTalonFX;
 import com.ctre.phoenix6.sim.TalonFXSimState;
 
+import dev.doglog.DogLog;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.FlywheelSim;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Shooter extends SubsystemBase {
@@ -33,11 +37,10 @@ public class Shooter extends SubsystemBase {
   private final static double jKg = 0.001564; //value for 1 motor (1.1 in^2/lb): 0.00156456776 m^2/kg
 
   private final static FlywheelSim sim = new FlywheelSim(DCMotor.getFalcon500(1), motorGearRed, jKg);
-  private final TalonFXSimState controller1Sim = new TalonFXSimState(motor1Controller);
-  private final TalonFXSimState controller2Sim = new TalonFXSimState(motor2Controller);
+  private TalonFXSimState controller1Sim = new TalonFXSimState(motor1Controller);
+  private TalonFXSimState controller2Sim = new TalonFXSimState(motor2Controller);
   /** Creates a new Shooter. */
   public Shooter() {
-    sim.setInputVoltage(RobotController.getBatteryVoltage());
     configMotors();
   }
 
@@ -72,5 +75,28 @@ public class Shooter extends SubsystemBase {
 
   public double getMotor2Target() {
     return motor2Target;
+  }
+
+  public Command setTargetSpeed(double targetSpeed) {
+    return Commands.run(()-> {
+      setMotor1Target(targetSpeed);
+      setMotor2Target(targetSpeed);
+    }, 
+    this);
+  }
+
+  @Override
+  public void simulationPeriodic() {
+    controller1Sim = motor1Controller.getSimState();
+    controller2Sim = motor2Controller.getSimState();
+
+    double motorVoltage = controller1Sim.getMotorVoltage();
+
+    sim.setInputVoltage(motorVoltage);
+    sim.update(0.02);
+    controller1Sim.setRotorVelocity(sim.getAngularVelocityRPM() * 60/motorGearRed);
+    controller2Sim.setRotorVelocity(sim.getAngularVelocityRPM() * 60/motorGearRed);
+
+    SmartDashboard.putNumber("flywheel speed", sim.getAngularVelocityRPM());
   }
 }
