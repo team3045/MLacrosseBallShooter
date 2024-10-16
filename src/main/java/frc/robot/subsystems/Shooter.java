@@ -4,12 +4,14 @@
 
 package frc.robot.subsystems;
 
+import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.hardware.core.CoreTalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.sim.TalonFXSimState;
 
 import dev.doglog.DogLog;
@@ -24,14 +26,14 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Shooter extends SubsystemBase {
-  private TalonFX motor1Controller = new TalonFX(0);
-  private TalonFX motor2Controller = new TalonFX(0);
+  private TalonFX motor1Controller = new TalonFX(2);
+  private TalonFX motor2Controller = new TalonFX(5);
 
   private double motor1Target = 0;
   private double motor2Target = 0;
 
-  private double kP = 0.01;
-  private double feedForward = 0.01;
+  private double kP = 0.11;
+  private double feedForward = 0.11;
 
   private final static double motorGearRed = 1.5;
   private final static double jKg = 0.001564; //value for 1 motor (1.1 in^2/lb): 0.00156456776 m^2/kg
@@ -51,14 +53,19 @@ public class Shooter extends SubsystemBase {
     VelocityVoltage request2 = new VelocityVoltage(motor2Target);
     motor1Controller.setControl(request1.withSlot(0));
     motor2Controller.setControl(request2.withSlot(0));
+
+    SmartDashboard.putNumber("Velocity", motor1Controller.getVelocity().getValueAsDouble());
   }
 
   public void configMotors() {
     controller1Sim.setSupplyVoltage(RobotController.getBatteryVoltage());
     controller2Sim.setSupplyVoltage(RobotController.getBatteryVoltage());
-    TalonFXConfiguration config = new TalonFXConfiguration().withSlot0(new Slot0Configs().withKP(kP).withKV(feedForward));
-    motor1Controller.getConfigurator().apply(config);
-    motor2Controller.getConfigurator().apply(config);
+    TalonFXConfiguration config = new TalonFXConfiguration().withSlot0(new Slot0Configs()
+      .withKP(kP)
+      .withKV(feedForward)
+    );
+    motor1Controller.getConfigurator().apply(config.withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.Clockwise_Positive)));
+    motor2Controller.getConfigurator().apply(config.withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.CounterClockwise_Positive)));
   }
 
   public void setMotor1Target(double targetSpeed) {
@@ -77,9 +84,9 @@ public class Shooter extends SubsystemBase {
     return motor2Target;
   }
 
-  public Command setTargetSpeed(double targetSpeed) {
+  public Command setTargetSpeed(double targetSpeed, double bottomExtraFactor) {
     return Commands.run(()-> {
-      setMotor1Target(targetSpeed);
+      setMotor1Target(targetSpeed * bottomExtraFactor);
       setMotor2Target(targetSpeed);
     }, 
     this);

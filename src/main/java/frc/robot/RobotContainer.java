@@ -44,8 +44,10 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
+    float speedMPH = 200;
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
-    controller.L1().toggleOnTrue(shooter.setTargetSpeed(200));
+    controller.L1().onTrue(shooter.setTargetSpeed(speedMPH * 1.4444 * 2, 1.5));
+    controller.L2().onTrue(shooter.setTargetSpeed(0, 0));
   }
 
   /**
